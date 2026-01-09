@@ -29,6 +29,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug secrets configuration
+        run: |
+          echo "Checking secret configuration..."
+          echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
+          echo "SNS_RETRAIN_ARN is set: ${{ secrets.SNS_RETRAIN_ARN != '' }}"
+          echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "S3_BUCKET is set: ${{ secrets.S3_BUCKET != '' }}"
+          if [ -n "$AWS_REGION" ]; then
+            echo "AWS_REGION length: ${#AWS_REGION}"
+          else
+            echo "⚠️ AWS_REGION environment variable is empty!"
+          fi
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            echo "::error::AWS_REGION secret is not set or is empty"
+            echo "Please set AWS_REGION in repository secrets (e.g., us-east-1)"
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID secret is not set or is empty"
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error::AWS_SECRET_ACCESS_KEY secret is not set or is empty"
+            exit 1
+          fi
+          echo "✅ All required AWS secrets are configured"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -76,7 +108,7 @@ jobs:
           echo "mape=$MAPE" >> $GITHUB_OUTPUT
 
       - name: Send success notification
-        if: success()
+        if: success() && secrets.SNS_RETRAIN_ARN != ''
         run: |
           aws sns publish \
             --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
@@ -91,7 +123,7 @@ jobs:
           View workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Send failure notification
-        if: failure()
+        if: failure() && secrets.SNS_RETRAIN_ARN != ''
         run: |
           aws sns publish \
             --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
@@ -100,3 +132,9 @@ jobs:
             --message "Model retraining failed on $(date).
           
           Check the workflow logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Log notification status
+        if: always() && secrets.SNS_RETRAIN_ARN == ''
+        run: |
+          echo "ℹ️ SNS notifications are not configured (SNS_RETRAIN_ARN secret is empty)"
+          echo "Set SNS_RETRAIN_ARN in repository secrets to enable notifications"
