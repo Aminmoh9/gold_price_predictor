@@ -29,6 +29,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug AWS configuration
+        run: |
+          echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
+          echo "SNS_RETRAIN_ARN is set: ${{ secrets.SNS_RETRAIN_ARN != '' }}"
+          echo "AWS_REGION length: ${#AWS_REGION}"
+          if [ -z "$AWS_REGION" ]; then
+            echo "::warning::AWS_REGION secret is empty"
+          fi
+          if [ -z "$SNS_TOPIC_ARN" ]; then
+            echo "::warning::SNS_RETRAIN_ARN secret is empty"
+          fi
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SNS_TOPIC_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -45,6 +60,22 @@ jobs:
         run: |
           python src/gold_price_train.py
           echo "Training completed successfully"
+
+      - name: Validate AWS secrets
+        run: |
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            echo "::error::AWS_REGION secret is not set or is empty"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SNS_RETRAIN_ARN }}" ]; then
+            echo "::error::SNS_RETRAIN_ARN secret is not set or is empty"
+            exit 1
+          fi
+          if [ -z "${{ secrets.S3_BUCKET }}" ]; then
+            echo "::error::S3_BUCKET secret is not set or is empty"
+            exit 1
+          fi
+          echo "✅ All required AWS secrets are set"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -77,10 +108,14 @@ jobs:
 
       - name: Send success notification
         if: success()
+        continue-on-error: true
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SNS_TOPIC_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
         run: |
           aws sns publish \
-            --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
-            --region ${{ secrets.AWS_REGION }} \
+            --topic-arn "${SNS_TOPIC_ARN}" \
+            --region "${AWS_REGION}" \
             --subject "✅ Gold Model Retrained Successfully" \
             --message "Model retraining completed on $(date).
 
@@ -92,10 +127,14 @@ jobs:
 
       - name: Send failure notification
         if: failure()
+        continue-on-error: true
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SNS_TOPIC_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
         run: |
           aws sns publish \
-            --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
-            --region ${{ secrets.AWS_REGION }} \
+            --topic-arn "${SNS_TOPIC_ARN}" \
+            --region "${AWS_REGION}" \
             --subject "❌ Gold Model Retraining Failed" \
             --message "Model retraining failed on $(date).
           
