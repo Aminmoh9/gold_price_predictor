@@ -1,0 +1,32 @@
+{
+  "ridge": {
+    "alpha": 0.1
+  },
+  "random_forest": {
+    "n_estimators": 200,
+    "min_samples_split": 10,
+    "min_samples_leaf": 4,
+    "max_depth": 20
+  },
+  "xgboost": {
+    "subsample": 0.7,
+    "n_estimators": 300,
+    "max_depth": 3,
+    "learning_rate": 0.05,
+    "colsample_bytree": 0.7
+  },
+  "gradient_boosting": {
+    "subsample": 0.7,
+    "n_estimators": 200,
+    "max_depth": 3,
+    "learning_rate": 0.05
+  },
+  "lstm": {
+    "lookback": 20,
+    "units": 100,
+    "dropout": 0.2,
+    "epochs": 60,
+    "note": "Balanced config: 1.30% MAPE + 52.2% direction accuracy (best practical value)"
+  },
+  "tuning_date": "2026-01-07T14:43:05.567015"
+}

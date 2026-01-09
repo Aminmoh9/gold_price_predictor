@@ -1,0 +1,31 @@
+# Flask API requirements for Gold Price Prediction
+# Install with: pip install -r requirements.txt
+
+# Web Framework
+flask==3.0.3
+flask-cors==6.0.1
+
+# Machine Learning
+tensorflow==2.20.0
+scikit-learn==1.8.0
+numpy==1.26.4
+pandas==2.3.3
+xgboost==3.0.4
+
+# Model Persistence
+joblib==1.4.2
+
+# Data Source
+yfinance==0.2.65
+
+# Visualization
+matplotlib==3.10.7
+
+# Experiment Tracking
+mlflow==3.5.1
+
+# AWS Integration
+boto3==1.42.23
+
+# Utilities
+python-dotenv==1.2.1

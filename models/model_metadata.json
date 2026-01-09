@@ -1,0 +1,8 @@
+{
+  "lookback_days": 20,
+  "mape": 1.6385273540231844,
+  "rmse": 78.57745005630643,
+  "direction_accuracy": 51.821862348178136,
+  "train_samples": 990,
+  "test_samples": 248
+}

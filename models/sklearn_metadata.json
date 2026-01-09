@@ -1,0 +1,11 @@
+{
+  "model_type": "Ridge",
+  "mape": 1.0069501182859086,
+  "rmse": 49.65997117617779,
+  "mae": 35.8298109639343,
+  "direction_accuracy": 53.30578512396694,
+  "n_features": 29,
+  "train_samples": 966,
+  "test_samples": 242,
+  "timestamp": "2026-01-07T15:54:40.075044"
+}

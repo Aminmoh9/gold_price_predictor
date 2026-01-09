@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Price Predictor - LSTM Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .helper-text {
+            display: block;
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        /* Results Section */
+        .prediction {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 5px solid #2196F3;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .prediction h2 {
+            color: #1976D2;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .result-label {
+            font-size: 0.85em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .price-display {
+            font-size: 2em !important;
+            color: #1976D2;
+        }
+
+        .up {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .down {
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        .flat {
+            color: #9E9E9E;
+            font-weight: bold;
+        }
+
+        /* Direction indicator with emoji */
+        .direction-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2em;
+        }
+
+        /* Error styling */
+        .error-box {
+            background: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 20px;
+            border-radius: 8px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .error-box h2 {
+            color: #c62828;
+            margin-bottom: 15px;
+        }
+
+        .error-box pre {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.9em;
+            color: #d32f2f;
+        }
+
+        /* Model info section */
+        .model-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .model-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .info-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive design */
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                font-size: 1em;
+                padding: 12px;
+            }
+        }
+
+        /* Loading animation (optional enhancement) */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Market Data Section */
+        .collapsible-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .collapsible-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .collapsible-content {
+            display: none;
+            padding: 20px 0;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .collapsible-content.active {
+            display: block;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .positive-change {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .negative-change {
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        .table-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s;
+        }
+
+        .toggle-icon.rotated {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Gold Price Predictor</h1>
+            <p class="subtitle">LSTM Deep Learning Model | Real-time Predictions</p>
+        </header>
+
+        <div class="content">
+            <!-- Quick Prediction Section -->
+            <div class="section">
+                <h2 class="section-title">🚀 Quick Prediction</h2>
+                <form method="post" action="/predict_auto">
+                    <label>Get instant prediction using latest market data</label>
+                    <button type="submit" class="btn-primary">
+                        📈 Auto-Predict Tomorrow's Gold Price
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            {% if result %}
+            <div class="section">
+                <div class="prediction">
+                    <h2>📊 Prediction Results</h2>
+                    
+                    <div class="result-grid">
+                        <!-- Current Price -->
+                        <div class="result-item">
+                            <div class="result-label">Current Price</div>
+                            <div class="result-value price-display">
+                                ${{ "%.2f"|format(result.current_price|default(0)) }}
+                            </div>
+                        </div>
+
+                        <!-- Predicted Price -->
+                        <div class="result-item">
+                            <div class="result-label">Predicted Tomorrow</div>
+                            <div class="result-value price-display">
+                                ${{ "%.2f"|format(result.predicted_price|default(0)) }}
+                            </div>
+                        </div>
+
+                        <!-- Change Amount -->
+                        <div class="result-item">
+                            <div class="result-label">Expected Change</div>
+                            <div class="result-value {% if result.change > 0 %}up{% elif result.change < 0 %}down{% else %}flat{% endif %}">
+                                {{ "%+.2f"|format(result.change|default(0)) }} USD
+                            </div>
+                        </div>
+
+                        <!-- Change Percentage -->
+                        <div class="result-item">
+                            <div class="result-label">Change Percentage</div>
+                            <div class="result-value {% if result.change > 0 %}up{% elif result.change < 0 %}down{% else %}flat{% endif %}">
+                                {{ "%+.2f"|format(result.change_percent|default(0)) }}%
+                            </div>
+                        </div>
+
+                        <!-- Direction -->
+                        <div class="result-item">
+                            <div class="result-label">Market Direction</div>
+                            <div class="result-value">
+                                {% set direction_class = 'up' if result.direction and 'UP' in result.direction 
+                                                         else 'down' if result.direction and 'DOWN' in result.direction 
+                                                         else 'flat' %}
+                                <span class="direction-indicator {{ direction_class }}">
+                                    {% if 'UP' in result.direction %}
+                                        📈 {{ result.direction|default('N/A') }}
+                                    {% elif 'DOWN' in result.direction %}
+                                        📉 {{ result.direction|default('N/A') }}
+                                    {% else %}
+                                        ➡️ {{ result.direction|default('N/A') }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Timestamp -->
+                        <div class="result-item">
+                            <div class="result-label">Prediction Time</div>
+                            <div class="result-value" style="font-size: 0.9em;">
+                                {{ result.timestamp|default('N/A')|truncate(19, True, '') }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Model Information -->
+                    <div class="model-info">
+                        <strong>📌 Model Information</strong>
+                        <div class="model-info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Model Type:</span>
+                                <span class="info-value">{{ result.model_info.type|default('LSTM') }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Model MAPE:</span>
+                                <span class="info-value">{{ "%.2f"|format(result.model_info.mape|default(0)) }}%</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Lookback Window:</span>
+                                <span class="info-value">{{ result.model_info.lookback_days|default('N/A') }} days</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Market Data Section -->
+            {% if price_history %}
+            <div class="section">
+                <div class="collapsible-header" onclick="toggleMarketData()">
+                    <span>📊 View Market Data</span>
+                    <span class="toggle-icon" id="toggleIcon">▼</span>
+                </div>
+                <div class="collapsible-content" id="marketDataContent">
+                    <!-- Days Filter -->
+                    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <label for="daysFilter" style="font-weight: 600;">Show:</label>
+                        <select id="daysFilter" onchange="filterData()" style="padding: 8px 15px; border-radius: 5px; border: 2px solid #667eea; font-size: 1em; cursor: pointer;">
+                            <option value="30">Last 30 Days</option>
+                            <option value="60">Last 60 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="all">All Data</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Price Chart -->
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                    
+                    <!-- Price Table -->
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Close Price (USD)</th>
+                                    <th>Daily Change</th>
+                                </tr>
+                            </thead>
+                            <tbody id="priceTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Error Section -->
+            {% if error %}
+            <div class="section">
+                <div class="error-box">
+                    <h2>⚠️ Error Occurred</h2>
+                    <pre>{{ error }}</pre>
+                    <p style="margin-top: 15px; color: #c62828;">
+                        <strong>Troubleshooting Tips:</strong><br>
+                        • Ensure you have enough historical data (lookback days are model-dependent)<br>
+                        • Check that all values are valid numbers<br>
+                        • Verify internet connection for auto-fetch
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <footer>
+            <p><strong>Gold Price Predictor</strong></p>
+            <p>Powered by LSTM Neural Network | Ironhack Data Science Project</p>
+            <p style="margin-top: 10px;">By Amin Mohammadi</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript for Chart and Toggle -->
+    <script>
+        function toggleMarketData() {
+            const content = document.getElementById('marketDataContent');
+            const icon = document.getElementById('toggleIcon');
+            content.classList.toggle('active');
+            icon.classList.toggle('rotated');
+        }
+    </script>
+    {% if price_history %}
+    <script>
+        // Full price data (change already calculated by backend)
+        const allPriceData = JSON.parse('{{ price_history|tojson|safe }}');
+        let priceChart = null;
+        
+        // Filter data based on selection
+        function getFilteredData(days) {
+            if (days === 'all') {
+                return allPriceData;
+            }
+            const numDays = parseInt(days);
+            return allPriceData.slice(-numDays);
+        }
+        
+        // Update chart
+        function updateChart(data) {
+            if (!data || data.length === 0) return;
+            
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            const daysLabel = document.getElementById('daysFilter').value === 'all' 
+                ? 'All Available Data' 
+                : `Last ${document.getElementById('daysFilter').value} Days`;
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date),
+                    datasets: [{
+                        label: 'Gold Price (USD)',
+                        data: data.map(d => d.price),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: data.length > 60 ? 1 : 3,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Gold Price Trend - ' + daysLabel,
+                            font: { size: 16 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Price (USD)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update table
+        function updateTable(data) {
+            const tbody = document.getElementById('priceTableBody');
+            if (!tbody || !data || data.length === 0) return;
+            
+            tbody.innerHTML = '';
+            
+            // Reverse to show newest first
+            const reversed = [...data].reverse();
+            
+            reversed.forEach(item => {
+                const change = item.change || 0;
+                const changeClass = change > 0 ? 'positive-change' : change < 0 ? 'negative-change' : '';
+                const row = `<tr>
+                    <td>${item.date}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        // Filter data handler
+        function filterData() {
+            const days = document.getElementById('daysFilter').value;
+            const filteredData = getFilteredData(days);
+            updateChart(filteredData);
+            updateTable(filteredData);
+        }
+        
+        // Initialize with 30 days
+        filterData();
+    </script>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,95 @@
+# .github/workflows/retrain-model.yml
+# Automated weekly model retraining with deployment to S3 (Serverless - No EC2 24/7 required)
+
+name: Weekly Model Retrain
+
+on:
+  schedule:
+    # Every Sunday at 2:00 AM UTC
+    - cron: '0 2 * * 0'
+  
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.12'
+  TF_CPP_MIN_LOG_LEVEL: '2'
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run training script
+        id: training
+        run: |
+          python src/gold_price_train.py
+          echo "Training completed successfully"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload model to S3
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Upload new model with timestamp (for versioning)
+          aws s3 cp models/gold_lstm_model.keras s3://${{ secrets.S3_BUCKET }}/models/gold_lstm_model_${TIMESTAMP}.keras
+          aws s3 cp models/gold_scaler.pkl s3://${{ secrets.S3_BUCKET }}/models/gold_scaler_${TIMESTAMP}.pkl
+          aws s3 cp models/model_metadata.json s3://${{ secrets.S3_BUCKET }}/models/model_metadata_${TIMESTAMP}.json
+          
+          # Upload as "latest" (EC2 will pull this on startup)
+          aws s3 cp models/gold_lstm_model.keras s3://${{ secrets.S3_BUCKET }}/models/latest/gold_lstm_model.keras
+          aws s3 cp models/gold_scaler.pkl s3://${{ secrets.S3_BUCKET }}/models/latest/gold_scaler.pkl
+          aws s3 cp models/model_metadata.json s3://${{ secrets.S3_BUCKET }}/models/latest/model_metadata.json
+          
+          echo "✅ Models uploaded to S3"
+
+      - name: Read training metrics
+        id: metrics
+        run: |
+          MAPE=$(cat models/model_metadata.json | python -c "import sys, json; print(json.load(sys.stdin).get('mape', 'N/A'))")
+          echo "mape=$MAPE" >> $GITHUB_OUTPUT
+
+      - name: Send success notification
+        if: success()
+        run: |
+          aws sns publish \
+            --topic-arn ${{ secrets.SNS_TOPIC_ARN }} \
+            --subject "✅ Gold Model Retrained Successfully" \
+            --message "Model retraining completed on $(date).
+
+          MAPE: ${{ steps.metrics.outputs.mape }}%
+          
+          New model uploaded to S3: ${{ secrets.S3_BUCKET }}/models/latest/
+          
+          View workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          aws sns publish \
+            --topic-arn ${{ secrets.SNS_TOPIC_ARN }} \
+            --subject "❌ Gold Model Retraining Failed" \
+            --message "Model retraining failed on $(date).
+          
+          Check the workflow logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

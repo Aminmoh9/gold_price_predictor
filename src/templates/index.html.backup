@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gold Price Predictor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .prediction {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .up {
+            color: green;
+        }
+
+        .down {
+            color: red;
+        }
+
+        .flat {
+            color: gray;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gold Price Predictor</h1>
+
+    <form method="post" action="/web_predict">
+        <label>Paste last 60 gold prices (comma separated):</label><br>
+        <textarea name="prices" rows="4"></textarea><br>
+        <button type="submit">Predict with Custom Data</button>
+    </form>
+
+    <form method="post" action="/web_predict_auto">
+        <button type="submit">Auto Predict Next Day Price</button>
+    </form>
+
+    {% if result %}
+        <div class="prediction">
+            <h2>Prediction Result</h2>
+            <ul>
+                <li><b>Current Price:</b> ${{ result.current_price | default(0) | round(2) }}</li>
+                <li><b>Predicted Price:</b> ${{ result.predicted_price | default(0) | round(2) }}</li>
+                <li><b>Change:</b> ${{ result.change | default(0) | round(2) }} ({{ result.change_percent | default(0) | round(2) }}%)</li>
+
+                {% set direction_class = 'up' if result.direction and result.direction[:2] == 'UP' 
+                                         else 'down' if result.direction and result.direction[:4] == 'DOWN' 
+                                         else 'flat' %}
+                <li>
+                    <b>Direction:</b>
+                    <span class="{{ direction_class }}">{{ result.direction | default('N/A') }}</span>
+                </li>
+
+                <li><b>Model MAPE:</b> {{ result.model_info.mape | default('N/A') }}</li>
+                <li><b>Lookback Days:</b> {{ result.model_info.lookback_days | default('N/A') }}</li>
+                <li><b>Timestamp:</b> {{ result.timestamp | default('N/A') }}</li>
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if error %}
+        <div class="prediction">
+            <h2>Error</h2>
+            <pre>{{ error }}</pre>
+        </div>
+    {% endif %}
+</body>
+</html>

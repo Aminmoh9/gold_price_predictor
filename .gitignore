@@ -1,0 +1,42 @@
+# Files and folders to ignore in Git
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Environment
+venv/
+.env
+.env.local
+# Note: .env.example is NOT ignored (it's a template)
+
+# MLflow
+mlruns/
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AWS credentials
+.aws/
+
+
+# VS Code
+.vscode/
+
+# Other
+*.bak
+*.tmp
+
+#Pem key
+*.pem
+
+# Do not ignore source code, notebooks, requirements.txt, Dockerfile, guides, and documentation

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  gold-predictor:
+    build: .
+    container_name: gold-predictor
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TF_ENABLE_ONEDNN_OPTS=0
+      - TF_CPP_MIN_LOG_LEVEL=2
+      # Uncomment for S3 model loading on EC2:
+      # - S3_MODEL_BUCKET=gold-price-predictor-models
+      # - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      # Mount models directory for local development
+      - ./models:/app/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# For production with S3:
+# docker-compose -f docker-compose.yml up --build
