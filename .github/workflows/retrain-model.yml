@@ -22,7 +22,7 @@ jobs:
     
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
-      SNS_TOPIC_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
+      SNS_TOPIC_ARN: ${{ secrets.SNS_TOPIC_ARN }}
       TF_CPP_MIN_LOG_LEVEL: '2'
 
     steps:
@@ -79,7 +79,8 @@ jobs:
         if: success()
         run: |
           aws sns publish \
-            --topic-arn ${{ secrets.RETRAIN_ARN }} \
+            --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
+            --region ${{ secrets.AWS_REGION }} \
             --subject "✅ Gold Model Retrained Successfully" \
             --message "Model retraining completed on $(date).
 
@@ -94,6 +95,7 @@ jobs:
         run: |
           aws sns publish \
             --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
+            --region ${{ secrets.AWS_REGION }} \
             --subject "❌ Gold Model Retraining Failed" \
             --message "Model retraining failed on $(date).
           
