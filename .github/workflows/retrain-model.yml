@@ -38,17 +38,47 @@ jobs:
 
       - name: Validate AWS secrets
         run: |
+          MISSING_SECRETS=()
+          
           if [ -z "$AWS_REGION" ]; then
             echo "❌ ERROR: AWS_REGION secret is not set or is empty"
-            exit 1
+            MISSING_SECRETS+=("AWS_REGION")
           fi
+          
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "❌ ERROR: AWS_ACCESS_KEY_ID secret is not set or is empty"
+            MISSING_SECRETS+=("AWS_ACCESS_KEY_ID")
+          fi
+          
+          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "❌ ERROR: AWS_SECRET_ACCESS_KEY secret is not set or is empty"
+            MISSING_SECRETS+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          
+          if [ -z "$S3_BUCKET" ]; then
+            echo "❌ ERROR: S3_BUCKET secret is not set or is empty"
+            MISSING_SECRETS+=("S3_BUCKET")
+          fi
+          
           if [ -z "$SNS_RETRAIN_ARN" ]; then
             echo "⚠️ WARNING: SNS_RETRAIN_ARN secret is not set - notifications will be skipped"
           fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo ""
+            echo "📋 Missing required secrets: ${MISSING_SECRETS[*]}"
+            echo "Please configure these secrets in GitHub repository settings:"
+            echo "Settings → Secrets and variables → Actions → Repository secrets"
+            exit 1
+          fi
+          
           echo "✅ Required AWS secrets validated"
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           SNS_RETRAIN_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
