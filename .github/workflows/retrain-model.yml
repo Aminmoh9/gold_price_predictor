@@ -34,6 +34,7 @@ jobs:
           echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
           echo "SNS_RETRAIN_ARN is set: ${{ secrets.SNS_RETRAIN_ARN != '' }}"
           echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
           echo "S3_BUCKET is set: ${{ secrets.S3_BUCKET != '' }}"
 
       - name: Validate AWS secrets
