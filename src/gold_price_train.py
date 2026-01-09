@@ -29,6 +29,7 @@ load_dotenv()
 # SNS Configuration for Model Degradation Alerts
 # ============================================
 SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
+AWS_REGION = os.environ.get("AWS_REGION")
 MAPE_THRESHOLD = 2.0  # Alert if MAPE exceeds this value
 
 def notify_model_performance(mape, rmse, direction_accuracy, threshold=MAPE_THRESHOLD):
@@ -39,7 +40,7 @@ def notify_model_performance(mape, rmse, direction_accuracy, threshold=MAPE_THRE
     
     try:
         if mape > threshold:
-            sns = boto3.client('sns', region_name='us-east-1')
+            sns = boto3.client("sns", region_name=AWS_REGION)
             message = f"""⚠️ Gold Price Model Performance Alert
 
 MAPE: {mape:.2f}% (Threshold: {threshold}%)

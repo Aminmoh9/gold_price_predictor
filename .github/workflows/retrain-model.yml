@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      SNS_TOPIC_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
+      TF_CPP_MIN_LOG_LEVEL: '2'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,7 +79,7 @@ jobs:
         if: success()
         run: |
           aws sns publish \
-            --topic-arn ${{ secrets.SNS_TOPIC_ARN }} \
+            --topic-arn ${{ secrets.RETRAIN_ARN }} \
             --subject "✅ Gold Model Retrained Successfully" \
             --message "Model retraining completed on $(date).
 
@@ -88,7 +93,7 @@ jobs:
         if: failure()
         run: |
           aws sns publish \
-            --topic-arn ${{ secrets.SNS_TOPIC_ARN }} \
+            --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
             --subject "❌ Gold Model Retraining Failed" \
             --message "Model retraining failed on $(date).
           
