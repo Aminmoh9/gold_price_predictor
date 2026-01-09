@@ -29,6 +29,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug AWS secrets
+        run: |
+          echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
+          echo "SNS_RETRAIN_ARN is set: ${{ secrets.SNS_RETRAIN_ARN != '' }}"
+          echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "S3_BUCKET is set: ${{ secrets.S3_BUCKET != '' }}"
+
+      - name: Validate AWS secrets
+        run: |
+          if [ -z "$AWS_REGION" ]; then
+            echo "❌ ERROR: AWS_REGION secret is not set or is empty"
+            exit 1
+          fi
+          if [ -z "$SNS_RETRAIN_ARN" ]; then
+            echo "⚠️ WARNING: SNS_RETRAIN_ARN secret is not set - notifications will be skipped"
+          fi
+          echo "✅ Required AWS secrets validated"
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SNS_RETRAIN_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -76,7 +97,7 @@ jobs:
           echo "mape=$MAPE" >> $GITHUB_OUTPUT
 
       - name: Send success notification
-        if: success()
+        if: success() && secrets.SNS_RETRAIN_ARN != ''
         run: |
           aws sns publish \
             --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
@@ -91,7 +112,7 @@ jobs:
           View workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Send failure notification
-        if: failure()
+        if: failure() && secrets.SNS_RETRAIN_ARN != ''
         run: |
           aws sns publish \
             --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
