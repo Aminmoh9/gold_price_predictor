@@ -1,4 +1,4 @@
-# .github/workflows/retrain-model.yml
+# . github/workflows/retrain-model.yml
 # Automated weekly model retraining with deployment to S3 (Serverless - No EC2 24/7 required)
 
 name: Weekly Model Retrain
@@ -9,25 +9,72 @@ on:
     - cron: '0 2 * * 0'
   
   # Allow manual trigger from GitHub UI
-  workflow_dispatch:
+  workflow_dispatch: 
 
 env:
   PYTHON_VERSION: '3.12'
   TF_CPP_MIN_LOG_LEVEL: '2'
 
 jobs:
-  retrain:
+  retrain: 
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
     env:
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      SNS_TOPIC_ARN: ${{ secrets.SNS_TOPIC_ARN }}
+      AWS_REGION:  ${{ secrets.AWS_REGION }}
+      SNS_TOPIC_ARN: ${{ secrets. SNS_TOPIC_ARN }}
       TF_CPP_MIN_LOG_LEVEL: '2'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Debug - Check secrets
+        run: |
+          echo "🔍 Checking secret configuration..."
+          echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
+          echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets. AWS_SECRET_ACCESS_KEY != '' }}"
+          echo "S3_BUCKET is set: ${{ secrets.S3_BUCKET != '' }}"
+          echo "SNS_RETRAIN_ARN is set: ${{ secrets.SNS_RETRAIN_ARN != '' }}"
+          if [ -n "$AWS_REGION" ]; then
+            echo "AWS_REGION value length: ${#AWS_REGION}"
+          else
+            echo "⚠️ AWS_REGION is empty!"
+          fi
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name:  Validate required secrets
+        run: |
+          MISSING_SECRETS=()
+          
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            MISSING_SECRETS+=("AWS_REGION")
+          fi
+          
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            MISSING_SECRETS+=("AWS_ACCESS_KEY_ID")
+          fi
+          
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            MISSING_SECRETS+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          
+          if [ -z "${{ secrets.S3_BUCKET }}" ]; then
+            MISSING_SECRETS+=("S3_BUCKET")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ ERROR: The following required secrets are missing or empty:"
+            printf '  - %s\n' "${MISSING_SECRETS[@]}"
+            echo ""
+            echo "Please set these secrets in:  Settings → Secrets and variables → Actions"
+            echo "Repository: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are configured"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,12 +96,12 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:  ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region:  ${{ secrets.AWS_REGION }}
 
       - name: Upload model to S3
-        run: |
+        run:  |
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Upload new model with timestamp (for versioning)
@@ -76,11 +123,11 @@ jobs:
           echo "mape=$MAPE" >> $GITHUB_OUTPUT
 
       - name: Send success notification
-        if: success()
-        run: |
+        if: success() && secrets.SNS_RETRAIN_ARN != ''
+        run:  |
           aws sns publish \
-            --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
-            --region ${{ secrets.AWS_REGION }} \
+            --topic-arn "${{ secrets.SNS_RETRAIN_ARN }}" \
+            --region "${{ secrets.AWS_REGION }}" \
             --subject "✅ Gold Model Retrained Successfully" \
             --message "Model retraining completed on $(date).
 
@@ -88,15 +135,28 @@ jobs:
           
           New model uploaded to S3: ${{ secrets.S3_BUCKET }}/models/latest/
           
-          View workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          View workflow:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-      - name: Send failure notification
-        if: failure()
+      - name: Log success (no SNS)
+        if: success() && secrets.SNS_RETRAIN_ARN == ''
+        run: |
+          echo "✅ Model retraining completed successfully!"
+          echo "MAPE:  ${{ steps.metrics.outputs. mape }}%"
+          echo "⚠️ SNS_RETRAIN_ARN not configured - skipping notification"
+
+      - name:  Send failure notification
+        if: failure() && secrets.SNS_RETRAIN_ARN != ''
         run: |
           aws sns publish \
-            --topic-arn ${{ secrets.SNS_RETRAIN_ARN }} \
-            --region ${{ secrets.AWS_REGION }} \
+            --topic-arn "${{ secrets.SNS_RETRAIN_ARN }}" \
+            --region "${{ secrets.AWS_REGION }}" \
             --subject "❌ Gold Model Retraining Failed" \
             --message "Model retraining failed on $(date).
           
           Check the workflow logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Log failure (no SNS)
+        if: failure() && secrets.SNS_RETRAIN_ARN == ''
+        run: |
+          echo "❌ Model retraining failed!"
+          echo "⚠️ SNS_RETRAIN_ARN not configured - skipping notification"
