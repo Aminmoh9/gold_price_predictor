@@ -62,6 +62,11 @@ jobs:
           
           echo "✅ Models uploaded to S3"
 
+      - name: Upload MLflow logs to S3
+        run: |
+          aws s3 sync mlruns/ s3://${{ secrets.S3_BUCKET }}/mlruns/ --delete
+          echo "✅ MLflow logs uploaded to S3"
+
       - name: Read training metrics
         id: metrics
         run: |
