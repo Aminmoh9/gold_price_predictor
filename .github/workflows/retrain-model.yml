@@ -21,8 +21,8 @@ jobs:
     timeout-minutes: 30
     
     env:
-      AWS_REGION:  ${{ secrets.AWS_REGION }}
-      SNS_TOPIC_ARN: ${{ secrets. SNS_TOPIC_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      SNS_RETRAIN_ARN: ${{ secrets.SNS_RETRAIN_ARN }}
       TF_CPP_MIN_LOG_LEVEL: '2'
 
     steps:
@@ -34,7 +34,7 @@ jobs:
           echo "🔍 Checking secret configuration..."
           echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
           echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
-          echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets. AWS_SECRET_ACCESS_KEY != '' }}"
+          echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
           echo "S3_BUCKET is set: ${{ secrets.S3_BUCKET != '' }}"
           echo "SNS_RETRAIN_ARN is set: ${{ secrets.SNS_RETRAIN_ARN != '' }}"
           if [ -n "$AWS_REGION" ]; then
@@ -45,7 +45,7 @@ jobs:
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name:  Validate required secrets
+      - name: Validate required secrets
         run: |
           MISSING_SECRETS=()
           
@@ -96,12 +96,12 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:  ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:  ${{ secrets.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload model to S3
-        run:  |
+        run: |
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Upload new model with timestamp (for versioning)
@@ -124,7 +124,7 @@ jobs:
 
       - name: Send success notification
         if: success() && secrets.SNS_RETRAIN_ARN != ''
-        run:  |
+        run: |
           aws sns publish \
             --topic-arn "${{ secrets.SNS_RETRAIN_ARN }}" \
             --region "${{ secrets.AWS_REGION }}" \
@@ -141,10 +141,10 @@ jobs:
         if: success() && secrets.SNS_RETRAIN_ARN == ''
         run: |
           echo "✅ Model retraining completed successfully!"
-          echo "MAPE:  ${{ steps.metrics.outputs. mape }}%"
+          echo "MAPE: ${{ steps.metrics.outputs.mape }}%"
           echo "⚠️ SNS_RETRAIN_ARN not configured - skipping notification"
 
-      - name:  Send failure notification
+      - name: Send failure notification
         if: failure() && secrets.SNS_RETRAIN_ARN != ''
         run: |
           aws sns publish \
