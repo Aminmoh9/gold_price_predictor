@@ -29,7 +29,7 @@ load_dotenv()
 # SNS Configuration for Model Degradation Alerts
 # ============================================
 SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
-AWS_REGION = os.environ.get("AWS_REGION")
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")  # Default to us-east-1
 MAPE_THRESHOLD = 2.0  # Alert if MAPE exceeds this value
 
 def notify_model_performance(mape, rmse, direction_accuracy, threshold=MAPE_THRESHOLD):
