@@ -7,7 +7,7 @@ This project predicts Gold/USD prices using machine learning and MLOps best prac
 | Model | MAPE | RMSE | Direction Accuracy |
 |-------|------|------|-------------------|
 | **Ridge (sklearn)** | 1.01% 🏆 | $49.66 | 53.3% |
-| LSTM (Deep Learning) | 1.49% | $72.05 | 51.0% |
+| LSTM (Deep Learning) | 1.26% | ~$65 | 51.0% |
 
 ✅ Both models pass the target of **MAPE < 2%**
 
